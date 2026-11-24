@@ -1,0 +1,82 @@
+[
+  {
+    "id": "target_LA0015_enroll_1",
+    "filename": "target_LA0015_enroll_1.wav",
+    "source_utt": "LA_E_1894268",
+    "speaker_id": "LA_0015",
+    "system_id": "-",
+    "ground_truth": "bonafide",
+    "duration_sec": 4.9,
+    "title": "目标人 LA_0015 注册真声 #1（用于声纹注册）"
+  },
+  {
+    "id": "target_LA0015_enroll_2",
+    "filename": "target_LA0015_enroll_2.wav",
+    "source_utt": "LA_E_2885805",
+    "speaker_id": "LA_0015",
+    "system_id": "-",
+    "ground_truth": "bonafide",
+    "duration_sec": 5.0,
+    "title": "目标人 LA_0015 注册真声 #2（用于声纹注册）"
+  },
+  {
+    "id": "target_LA0015_genuine_test",
+    "filename": "target_LA0015_genuine_test.wav",
+    "source_utt": "LA_E_3534522",
+    "speaker_id": "LA_0015",
+    "system_id": "-",
+    "ground_truth": "bonafide",
+    "duration_sec": 3.19,
+    "title": "目标人 LA_0015 真实测试语音（真声）"
+  },
+  {
+    "id": "target_LA0015_spoof_A10",
+    "filename": "target_LA0015_spoof_A10.wav",
+    "source_utt": "LA_E_8468002",
+    "speaker_id": "LA_0015",
+    "system_id": "A10",
+    "ground_truth": "spoof",
+    "duration_sec": 3.74,
+    "title": "针对 LA_0015 的伪造攻击（A10: Tacotron+WaveRNN）"
+  },
+  {
+    "id": "target_LA0015_spoof_A12",
+    "filename": "target_LA0015_spoof_A12.wav",
+    "source_utt": "LA_E_7671573",
+    "speaker_id": "LA_0015",
+    "system_id": "A12",
+    "ground_truth": "spoof",
+    "duration_sec": 4.34,
+    "title": "针对 LA_0015 的伪造攻击（A12: Neural WaveNet）"
+  },
+  {
+    "id": "impostor_LA0022_genuine",
+    "filename": "impostor_LA0022_genuine.wav",
+    "source_utt": "LA_E_4148077",
+    "speaker_id": "LA_0022",
+    "system_id": "-",
+    "ground_truth": "bonafide",
+    "duration_sec": 5.0,
+    "title": "非目标真人冒充语音（LA_0022 真声）"
+  },
+  {
+    "id": "spoof_A09_world_vocoder",
+    "filename": "spoof_A09_world_vocoder.wav",
+    "source_utt": "LA_E_2947508",
+    "speaker_id": "LA_0024",
+    "system_id": "A09",
+    "ground_truth": "spoof",
+    "duration_sec": 3.05,
+    "title": "伪造音频溯源样本（A09: Vocoder/WORLD）"
+  },
+  {
+    "id": "spoof_A17_vae_vc",
+    "filename": "spoof_A17_vae_vc.wav",
+    "source_utt": "LA_E_1837629",
+    "speaker_id": "LA_0042",
+    "system_id": "A17",
+    "ground_truth": "spoof",
+    "duration_sec": 5.0,
+    "title": "伪造音频溯源样本（A17: VAE 语音转换）"
+  }
+]

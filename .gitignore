@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+.DS_Store
+
+# 大体积权重（超过 GitHub 限制），通过 scripts/download_weights.py 一键下载
+weights/w2v2-aasist.onnx
+weights/ecapa_pretrain.model
+
+# 运行时动态生成的声纹库与临时导出报告
+voiceprints/*.json
+*.csv
+report.json
+*.log

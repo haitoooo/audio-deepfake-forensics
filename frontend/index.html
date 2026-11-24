@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Audio Deepfake Forensics · 伪造音频检测与算法溯源平台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    body { background: #0b1120; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; }
+    .glass { background: rgba(15, 23, 42, 0.78); backdrop-filter: blur(12px); border: 1px solid rgba(148, 163, 184, 0.16); }
+    .tab-active { background: linear-gradient(135deg, #2563eb, #0ea5e9); color: #fff; box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35); }
+    .wave-bar { transition: height 0.25s ease; }
+  </style>
+</head>
+<body class="min-h-screen">
+  <!-- 顶部导航与后端状态栏 -->
+  <header class="sticky top-0 z-30 glass border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center font-bold text-slate-950">AF</div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold tracking-tight text-white">Audio Deepfake Forensics</h1>
+          <p class="text-xs text-slate-400">非特定人检测 · 特定人防伪 (SASV) · 合成算法取证溯源</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2 text-xs">
+        <span id="gpuBadge" class="px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300">连接后端中...</span>
+        <div class="flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1">
+          <span class="text-slate-400">API:</span>
+          <input id="apiBaseInput" type="text" class="bg-transparent text-cyan-300 outline-none w-44" placeholder="默认同源 (http://...:8000)" />
+          <button onclick="saveApiBase()" class="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white">重连</button>
+        </div>
+        <a id="swaggerLink" href="/docs" target="_blank" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-300">Swagger API ↗</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+    <!-- 4 大功能 Tab -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
+      <button id="tab-detect" onclick="switchTab('detect')" class="tab-active py-3 px-4 rounded-xl text-sm font-semibold transition">
+        1. 非特定人伪造检测
+      </button>
+      <button id="tab-sasv" onclick="switchTab('sasv')" class="glass py-3 px-4 rounded-xl text-sm font-semibold text-slate-300 hover:text-white transition">
+        2. 特定人防伪 (SASV)
+      </button>
+      <button id="tab-trace" onclick="switchTab('trace')" class="glass py-3 px-4 rounded-xl text-sm font-semibold text-slate-300 hover:text-white transition">
+        3. 合成算法溯源
+      </button>
+      <button id="tab-analyze" onclick="switchTab('analyze')" class="glass py-3 px-4 rounded-xl text-sm font-semibold text-slate-300 hover:text-white transition">
+        4. 一键综合取证
+      </button>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <!-- 左侧：音频输入 + 特定人声纹库 + 参数配置 -->
+      <section class="lg:col-span-5 space-y-5">
+        <!-- 音频输入卡片 -->
+        <div class="glass rounded-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-white">音频输入（上传 / 录音 / 内置样本）</h2>
+            <span id="selectedAudioLabel" class="text-xs text-cyan-400 truncate max-w-[180px]">未选择音频</span>
+          </div>
+
+          <label id="dropZone" class="block border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-xl p-5 text-center cursor-pointer transition bg-slate-900/50">
+            <input id="audioFileInput" type="file" accept=".wav,.flac,.mp3,.ogg,.m4a,audio/*" class="hidden" />
+            <p class="text-sm text-slate-200 font-medium">点击选择或拖拽音频文件到此</p>
+            <p class="text-xs text-slate-400 mt-1">支持 WAV / FLAC / MP3 / OGG（自动重采样 16kHz）</p>
+          </label>
+
+          <!-- 内置真实样本快速点选 -->
+          <div class="space-y-1.5">
+            <label class="text-xs text-slate-400">或一键选择内置 ASVspoof 2019 LA 演示音频：</label>
+            <select id="sampleSelect" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-blue-500">
+              <option value="">-- 请选择内置真实/伪造示例音频 --</option>
+            </select>
+          </div>
+
+          <!-- 在线音频播放器 -->
+          <div id="audioPlayerWrap" class="hidden bg-slate-900/80 border border-slate-800 rounded-xl p-3">
+            <audio id="audioPlayer" controls class="w-full h-9"></audio>
+          </div>
+        </div>
+
+        <!-- 特定人声纹库管理面板（在 SASV 或 综合取证 Tab 显示） -->
+        <div id="speakerPanel" class="hidden glass rounded-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-white">特定人声纹库（ECAPA-TDNN 192-d）</h2>
+            <button onclick="quickEnrollDemoSpeaker()" class="text-xs px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white">
+              一键注册示例人 LA_0015
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <input id="enrollSpeakerName" type="text" placeholder="说话人 ID (如 LA_0015)" class="sm:col-span-2 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none" />
+            <button onclick="enrollCurrentAudio()" class="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-medium text-white">
+              用当前音频注册
+            </button>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="text-xs text-slate-400">选择待核验的目标说话人：</label>
+            <div class="flex gap-2">
+              <select id="targetSpeakerSelect" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none">
+                <option value="">-- 暂无已注册说话人 --</option>
+              </select>
+              <button onclick="deleteSelectedSpeaker()" class="px-3 py-2 rounded-lg bg-rose-900/60 hover:bg-rose-800 text-rose-200 text-xs">删除</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 模型与运行参数卡片 -->
+        <div class="glass rounded-2xl p-5 space-y-4">
+          <h2 class="text-sm font-semibold text-white">推理模型与参数配置</h2>
+
+          <div id="modelSelectWrap" class="space-y-1.5">
+            <label class="text-xs text-slate-400">防伪检测模型（任务一/二）：</label>
+            <select id="cmModelSelect" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none">
+              <option value="w2v2_aasist">W2V2-AASIST (317M · SOTA 推荐 · 跨域强泛化)</option>
+              <option value="aasist">AASIST (297K · 图注意力网络 · 2ms/条)</option>
+              <option value="aasist_l">AASIST-L (85K · 极速轻量边缘版 · 1.7ms/条)</option>
+            </select>
+          </div>
+
+          <div id="traceHeadWrap" class="hidden space-y-1.5">
+            <label class="text-xs text-slate-400">算法溯源模型头（任务三）：</label>
+            <select id="traceHeadSelect" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none">
+              <option value="13class">AASIST-SourceTracer 13类 (A07-A19 · 跨人 98.53%)</option>
+              <option value="6class">AASIST-SourceTracer 6类 (A01-A06 · 跨人 100.00%)</option>
+            </select>
+          </div>
+
+          <div id="alwaysTraceWrap" class="hidden flex items-center gap-2 text-xs text-slate-300">
+            <input id="alwaysTraceCheck" type="checkbox" class="rounded bg-slate-800 border-slate-600" />
+            <label for="alwaysTraceCheck">即使判定为真声也强制输出算法溯源分布</label>
+          </div>
+
+          <button id="runBtn" onclick="runInference()" class="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-semibold text-sm shadow-lg shadow-blue-900/30 transition">
+            开始 GPU 实时检测分析
+          </button>
+        </div>
+      </section>
+
+      <!-- 右侧：实时分析结果展示区 -->
+      <section class="lg:col-span-7 space-y-5">
+        <div id="resultCard" class="glass rounded-2xl p-6 min-h-[420px] flex flex-col justify-between space-y-5">
+          <div id="emptyState" class="my-auto text-center py-12 space-y-3">
+            <div class="w-14 h-14 mx-auto rounded-2xl bg-slate-800/90 border border-slate-700 flex items-center justify-center text-2xl">🎙️</div>
+            <h3 class="text-base font-semibold text-white">选择左侧示例音频或上传文件开始取证</h3>
+            <p class="text-xs text-slate-400 max-w-md mx-auto">
+              系统将调用 253 服务器 RTX 5090 实时执行端到端推理，返回真伪概率、特定人声纹相似度或合成算法 Top-K 溯源分布。
+            </p>
+          </div>
+
+          <div id="resultContent" class="hidden space-y-5">
+            <!-- 顶层判决横幅 -->
+            <div id="verdictBanner" class="rounded-xl p-4 border flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div class="text-xs opacity-80" id="verdictSub">检测结论</div>
+                <div class="text-xl font-bold mt-0.5" id="verdictTitle">-</div>
+              </div>
+              <div class="text-right">
+                <div class="text-xs opacity-80">推理延迟</div>
+                <div class="text-lg font-mono font-bold" id="verdictLatency">- ms</div>
+              </div>
+            </div>
+
+            <!-- 指标卡片行 -->
+            <div id="metricGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+
+            <!-- 波形可视化条 -->
+            <div id="waveformBox" class="hidden bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+              <div class="text-xs text-slate-400 mb-2">音频振幅包络预览（16kHz 归一化）</div>
+              <div id="waveformBars" class="h-14 flex items-end gap-[2px]"></div>
+            </div>
+
+            <!-- 算法溯源柱状图 -->
+            <div id="traceChartBox" class="hidden bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+              <div class="text-xs text-slate-300 font-semibold mb-2">疑似合成/变声算法 Top-K 溯源置信度 (%)</div>
+              <canvas id="traceChart" height="145"></canvas>
+            </div>
+
+            <!-- 原始 JSON 折叠预览 -->
+            <details class="bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+              <summary class="text-xs text-slate-400 cursor-pointer hover:text-cyan-300">查看完整后端 API JSON 响应</summary>
+              <pre id="rawJsonPre" class="mt-2 text-[11px] text-emerald-300 overflow-x-auto max-h-56"></pre>
+            </details>
+          </div>
+
+          <!-- 等效 CLI & cURL 调用命令提示 -->
+          <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 space-y-1.5">
+            <div class="text-[11px] font-semibold text-slate-400">等效命令行（CLI）与 API（cURL）调用方式：</div>
+            <code id="cliSnippet" class="block text-[11px] text-cyan-300 font-mono break-all"></code>
+            <code id="curlSnippet" class="block text-[11px] text-amber-300 font-mono break-all"></code>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
