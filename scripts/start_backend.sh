@@ -11,10 +11,9 @@ if [ -d "$SITE_PKGS/nvidia" ]; then
 fi
 
 GPU_ID="${GPU_ID:-2}"
-HOST="${HOST:-0.0.0.0}"
+BIND_HOST="${BIND_HOST:-0.0.0.0}"
 PORT="${PORT:-8000}"
 
-echo "Starting Audio Deepfake Forensics Backend on GPU=${GPU_ID}, http://${HOST}:${PORT}"
-echo "Swagger Docs: http://127.0.0.1:${PORT}/docs"
+echo "Starting Audio Deepfake Forensics Web Demo on GPU=${GPU_ID}, http://${BIND_HOST}:${PORT}"
 cd "$PROJECT_ROOT"
-CUDA_VISIBLE_DEVICES="$GPU_ID" "$PYTHON_BIN" -m uvicorn backend.app:app --host "$HOST" --port "$PORT"
+CUDA_VISIBLE_DEVICES="$GPU_ID" "$PYTHON_BIN" -m uvicorn backend.app:app --host "$BIND_HOST" --port "$PORT"
