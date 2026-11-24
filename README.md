@@ -89,35 +89,19 @@ asv-forensics analyze samples/target_LA0015_spoof_A12.wav --model w2v2_aasist --
 
 ---
 
-## 调用方式二：前后端分离 Web Demo
+## 调用方式二：网页版 Demo（上传一段语音直接检测）
 
-### 1. 启动 FastAPI 推理后端（默认端口 `8000`）
+### 一键启动 Web Demo（默认端口 `8000`）
 
 ```bash
 # Linux / 253 服务器（自动配置 cuDNN 路径并绑定指定 GPU）
 GPU_ID=2 PORT=8000 bash scripts/start_backend.sh
 ```
-- Swagger 交互式接口文档：`http://<server-ip>:8000/docs`
-- 一体化页面访问地址：`http://<server-ip>:8000/`
+启动后浏览器直接打开 `http://<server-ip>:8000/` 即可使用：
+- **拖拽/点击上传一段语音**（支持 WAV / FLAC / MP3 / OGG / M4A），或直接点选内置 8 条示例语音试听体验；
+- 支持一键切换 **非特定人伪造检测 / 特定人防伪验证 / 伪造算法溯源 / 一键综合检测**，直观展示伪造风险进度条、特定人声纹相似度、波形包络与算法溯源 Top-K 柱状图。
 
-### 2. （可选）独立启动前端服务（前后端分离部署，默认端口 `5173`）
-
-```bash
-FRONTEND_PORT=5173 bash scripts/start_frontend.sh
-```
-访问 `http://<server-ip>:5173`，在右上角 `API` 输入框填写后端地址（如 `http://<server-ip>:8000`）点击「重连」即可跨域调用。
-
-### 3. 核心 RESTful API 接口清单
-
-| 方法与路径 | 功能说明 | cURL 示例 |
-| :--- | :--- | :--- |
-| `GET /api/health` | 查询 GPU 设备、模型就绪状态与声纹库数量 | `curl http://127.0.0.1:8000/api/health` |
-| `GET /api/samples` | 获取内置 8 条真实演示音频列表 | `curl http://127.0.0.1:8000/api/samples` |
-| `POST /api/detect` | 任务二：非特定人伪造音频检测 | `curl -X POST http://127.0.0.1:8000/api/detect -F "file=@samples/target_LA0015_spoof_A10.wav" -F "model=w2v2_aasist"` |
-| `POST /api/speakers/enroll` | 任务一：注册特定目标人声纹 | `curl -X POST http://127.0.0.1:8000/api/speakers/enroll -F "speaker_name=LA_0015" -F "files=@samples/target_LA0015_enroll_1.wav"` |
-| `POST /api/verify-target` | 任务一：特定人防伪声纹验证 (SASV) | `curl -X POST http://127.0.0.1:8000/api/verify-target -F "speaker_name=LA_0015" -F "file=@samples/target_LA0015_spoof_A10.wav"` |
-| `POST /api/trace` | 任务三：伪造音频合成算法溯源 | `curl -X POST http://127.0.0.1:8000/api/trace -F "file=@samples/spoof_A17_vae_vc.wav" -F "head=13class"` |
-| `POST /api/analyze` | 一键全流程综合取证 | `curl -X POST http://127.0.0.1:8000/api/analyze -F "file=@samples/target_LA0015_spoof_A12.wav" -F "speaker_name=LA_0015"` |
+> 如需前后端分离部署，也可额外执行 `FRONTEND_PORT=5173 bash scripts/start_frontend.sh` 单独托管前端静态资源。
 
 ---
 
